@@ -1,16 +1,19 @@
 def remove_comments(lines: list[str]) -> list[str]:
+    """ Removes comments from codelines """
     res: list[str] = []
     for line in lines:
         if '#' in line:
             res += [line[:line.index('#')]]
         elif '//' in line:
             res += [line[:line.index('//')]]
+        elif ';' in line:
+            res += [line[:line.index(';')]]
         else:
             res += [line]
     return res
 
 
-def init_storage(preset: dict = {}) -> dict[int, int | None]:
+def init_storage(preset: dict = {}) -> dict[int, int]:
     """ Helper function to set up storage dict """
     # print(f"[DEBUG] {preset}")
     if preset == {}:
@@ -50,6 +53,7 @@ def show_end(PC: int, ACC, IN1, IN2, S: dict) -> None:
 
 
 def reti_interpreter(filename: str) -> None:
+    """ Interprets reti commands given in a file """
     pc: int = 1
     acc: int = 0
     in1: int = 0
@@ -58,14 +62,16 @@ def reti_interpreter(filename: str) -> None:
     try:
         with open(filename, 'r') as file:
             lines = remove_comments(file.readlines())
+
+            # Initialize storage array, either with preset or empty
             if lines[0].startswith('S('):
-                # print("[WARN] Preset declaration in first line is currently unsupported, please use LOADI and STORE.")
                 storage = init_storage(parse_equation_string(lines[0]))
                 lines = lines[1:]
             else:
                 storage = init_storage()
+
             while (pc < len(lines)):
-                print(pc, acc)
+                # print(f"[DEBUG] PC: {pc} - {acc}")
                 current_line = lines[pc]
                 split_line = current_line.split(' ')
                 command = split_line[0]
@@ -81,17 +87,27 @@ def reti_interpreter(filename: str) -> None:
                     storage[int(var)] = acc
                     pc += 1
                 elif 'LOAD' in current_line:
-                    if 'LOADIN' in command:
-                        var = split_line[1]
-                        if '1' in command:
-                            acc = storage[in1 + int(var)]
-                        elif '2' in command:
-                            acc = storage[in2 + int(var)]
-                    elif 'LOADI' in command:
-                        acc = int(split_line[1])
+                    var = split_line[1]
+                    if var is None:
+                        raise KeyError
                     else:
-                        acc = storage[int(split_line[1])]
+                        var = int(var)
+                    if 'LOADIN' in command:
+                        if '1' in command:
+                            acc = storage[in1 + var]
+                        elif '2' in command:
+                            acc = storage[in2 + var]
+                    elif 'LOADI' in command:
+                        acc = var
+                    else:
+                        acc = storage[var]
                     pc += 1
+                elif 'MOVE' in current_line:
+                    source = split_line[1]
+                    destination = split_line[2]
+                    # TODO: Implement Move function
+                    if destination != 'PC':
+                        pc += 1
                 elif 'ADD' in current_line:
                     acc = acc + int(split_line[1])
                     pc += 1
@@ -102,16 +118,25 @@ def reti_interpreter(filename: str) -> None:
                     condition = current_line[4]
                     if condition == ' ':
                         if split_line[1] == '0':
+                            # Endless loop on itself -> program ended
                             show_end(pc, acc, in1, in2, storage)
                             return
-                        pc += int(split_line[1])
+                        else:
+                            # Unconditional jump
+                            pc += int(split_line[1])
                     else:
+                        # Conditional jump
                         if condition == '=':
                             condition = '=='
                         if eval(str(acc) + ' ' + condition + ' 0'):
                             pc += int(split_line[1])
                         else:
                             pc += 1
+                elif 'NOP' in current_line:
+                    pc += 1
+                else:
+                    print(f"[WARN] Unknown command at PC={pc}, skipping this command")
+                    pc += 1
             show_end(pc, acc, in1, in2, storage)
 
     except FileNotFoundError as e:
@@ -128,5 +153,5 @@ def reti_interpreter(filename: str) -> None:
 
 
 if __name__ == "__main__":
-    path = "./code/abc.reti"
+    path = "./code/ggt.reti"
     reti_interpreter(path)
