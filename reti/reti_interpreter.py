@@ -57,10 +57,11 @@ def show_end(PC: int, ACC, IN1, IN2, S: dict) -> None:
 
 def reti_interpreter(filename: str) -> None:
     """ Interprets reti commands given in a file """
-    pc: int = 1
-    acc: int = 0
-    in1: int = 0
-    in2: int = 0
+    register: dict[str, int] = {}
+    register['PC'] = 1
+    register['ACC'] = 0
+    register['IN1'] = 0
+    register['IN2'] = 0
 
     try:
         with open(filename, 'r') as file:
@@ -73,22 +74,23 @@ def reti_interpreter(filename: str) -> None:
             else:
                 storage = init_storage()
 
-            while (pc < len(lines)):
+            while (register['PC'] < len(lines)):
                 # print(f"[DEBUG] PC: {pc} - {acc}")
-                current_line = lines[pc]
+                current_line = lines[register['PC']]
                 split_line = current_line.split(' ')
                 command = split_line[0]
                 if 'STOREIN' in current_line:
+                    # TODO: could be simplified with new register storage
                     var = split_line[1]
                     if '1' in command:
-                        storage[in1 + int(var)] = acc
+                        storage[register['IN1'] + int(var)] = register['ACC']
                     elif '2' in command:
-                        storage[in2 + int(var)] = acc
-                    pc += 1
+                        storage[register['IN2'] + int(var)] = register['ACC']
+                    register['PC'] += 1
                 elif 'STORE' in current_line:
                     var = split_line[1]
-                    storage[int(var)] = acc
-                    pc += 1
+                    storage[int(var)] = register['ACC']
+                    register['PC'] += 1
                 elif 'LOAD' in current_line:
                     var = split_line[1]
                     if var is None:
@@ -96,51 +98,52 @@ def reti_interpreter(filename: str) -> None:
                     else:
                         var = int(var)
                     if 'LOADIN' in command:
+                        # TODO: could be simplified with new register storage
                         if '1' in command:
-                            acc = storage[in1 + var]
+                            register['ACC'] = storage[register['IN1'] + var]
                         elif '2' in command:
-                            acc = storage[in2 + var]
+                            register['ACC'] = storage[register['IN2'] + var]
                     elif 'LOADI' in command:
-                        acc = var
+                        register['ACC'] = var
                     else:
-                        acc = storage[var]
-                    pc += 1
+                        register['ACC'] = storage[var]
+                    register['PC'] += 1
                 elif 'MOVE' in current_line:
                     source = split_line[1]
                     destination = split_line[2]
                     # TODO: Implement Move function
                     if destination != 'PC':
-                        pc += 1
+                        register['PC'] += 1
                 elif 'ADD' in current_line:
-                    acc = acc + int(split_line[1])
-                    pc += 1
+                    register['ACC'] = register['ACC'] + int(split_line[1])
+                    register['PC'] += 1
                 elif 'SUB' in current_line:
-                    acc = acc - int(split_line[1])
-                    pc += 1
+                    register['ACC'] = register['ACC'] - int(split_line[1])
+                    register['PC'] += 1
                 elif 'JUMP' in current_line:
                     condition = current_line[4]
                     if condition == ' ':
                         if split_line[1] == '0':
                             # Endless loop on itself -> program ended
-                            show_end(pc, acc, in1, in2, storage)
+                            show_end(register['PC'], register['ACC'], register['IN1'], register['IN2'], storage)
                             return
                         else:
                             # Unconditional jump
-                            pc += int(split_line[1])
+                            register['PC'] += int(split_line[1])
                     else:
                         # Conditional jump
                         if condition == '=':
                             condition = '=='
-                        if eval(str(acc) + ' ' + condition + ' 0'):
-                            pc += int(split_line[1])
+                        if eval(str(register['ACC']) + ' ' + condition + ' 0'):
+                            register['PC'] += int(split_line[1])
                         else:
-                            pc += 1
+                            register['PC'] += 1
                 elif 'NOP' in current_line:
-                    pc += 1
+                    register['PC'] += 1
                 else:
-                    print(f"[WARN] Unknown command at PC={pc}, skipping this command")
-                    pc += 1
-            show_end(pc, acc, in1, in2, storage)
+                    print(f"[WARN] Unknown command at PC={register['PC']}, skipping this command")
+                    register['PC'] += 1
+            show_end(register['PC'], register['ACC'], register['IN1'], register['IN2'], storage)
 
     except FileNotFoundError as e:
         print("[ERROR] Coudn't find file.")
