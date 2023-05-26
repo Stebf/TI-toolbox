@@ -1,3 +1,6 @@
+import argparse
+
+
 def remove_comments(lines: list[str]) -> list[str]:
     """ Removes comments from codelines """
     res: list[str] = []
@@ -153,5 +156,11 @@ def reti_interpreter(filename: str) -> None:
 
 
 if __name__ == "__main__":
-    path = "./code/ggt.reti"
-    reti_interpreter(path)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--path", help="path to reti code file", type=str)
+    args = parser.parse_args()
+    if not args.path:
+        path = "./code/ggt.reti"
+        reti_interpreter(path)
+    else:
+        reti_interpreter(args.path)
