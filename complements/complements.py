@@ -1,6 +1,9 @@
 # TODO: Add support for fixed point numbers, e.g. -2.01
 #       Possible by left shift (2^x), converting and readding the point.
 
+import argparse
+
+
 def dec_to_bv(raw_val: int, required_bytes: int = 0) -> str:
     if raw_val < 0:
         bv_val = '1' + bin(raw_val)[3:]
@@ -68,7 +71,7 @@ def print_all_variants(number: int, required_bytes: int = 0) -> None:
     print(" ")
 
 
-if __name__ == "__main__":
+def main_debug() -> None:
     # print_all_variants(2342)
     # print_all_variants(-49101)
     # print_all_variants(-16)
@@ -86,3 +89,11 @@ if __name__ == "__main__":
     print(dec_to_bv(-16, 8))
     print(dec_to_ones(-16, 8))
     print(dec_to_twos(-16, 8))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "-number", help="The number you want to complement", type=int)
+    parser.add_argument("-b", "-bytes", help="The number of required bytes", type=int, default=0)
+    args = parser.parse_args()
+    print_all_variants(args.n, args.b)
