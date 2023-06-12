@@ -4,11 +4,17 @@
 """
 
 
-def quine(minterm: str, dimension: int):
-    logic = []
-    logic[0] = minterm
-    i = 0
-    primes = {}
+def quine(minterm: set[str], dimension: int):
+    storeA = dict()
+    for monoom in minterm:
+        len = monoom.count('1')
+        if len in storeA.keys():
+            storeA[len] += [monoom]
+        else:
+            storeA[len] = [monoom]
 
-    while logic != [] and i < dimension:
-        logic[i + 1]
+    print(storeA)
+
+
+if __name__ == "__main__":
+    quine({'0000', '0010', '0011', '1100'}, 1)
