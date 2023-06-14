@@ -11,14 +11,26 @@ def carry_ripple(inp: str, add: str) -> str:
     return out
 
 
-def full_adder(a: bool, b: bool, c: bool) -> tuple(bool, bool):
+def incrementer(inp: str, c: bool = True):
+    """ Implements the functionality of a incrementer """
+    inp = inp[::-1]
+    out = ""
+    for a in inp:
+        s, c = half_adder(bool(int(a)), c)
+        out = str(int(s)) + out
+    if c is True:
+        out = str(int(c)) + out
+    return out
+
+
+def full_adder(a: bool, b: bool, c: bool) -> tuple():
     """ Implements a full adder """
     ha1, ha2 = half_adder(a, b)
     fa1, fa2 = half_adder(ha1, c)
     return (fa1, (fa2 or ha2))
 
 
-def half_adder(a: bool, b: bool) -> tuple(bool, bool):
+def half_adder(a: bool, b: bool) -> tuple():
     """ Implements a half adder """
     return ((a ^ b), (a and b))
 
@@ -29,6 +41,16 @@ def test_carry_ripple() -> None:
     assert carry_ripple("100000", "000001") == "0100001"
 
 
+def test_incrementer() -> None:
+    """ Provides a unit test for incrementer() """
+    assert incrementer("00110", False) == "00110"
+    assert incrementer("0011") == "0100"
+    assert incrementer("1111") == "10000"
+
+
 if __name__ == "__main__":
-    a = carry_ripple("1011", "0110")
-    print(a)
+    # a = carry_ripple("1011", "0110")
+    # print(a)
+
+    test_carry_ripple()
+    test_incrementer()
