@@ -23,14 +23,14 @@ def incrementer(inp: str, c: bool = True):
     return out
 
 
-def full_adder(a: bool, b: bool, c: bool) -> tuple():
+def full_adder(a: bool, b: bool, c: bool):
     """ Implements a full adder """
     ha1, ha2 = half_adder(a, b)
     fa1, fa2 = half_adder(ha1, c)
     return (fa1, (fa2 or ha2))
 
 
-def half_adder(a: bool, b: bool) -> tuple():
+def half_adder(a: bool, b: bool):
     """ Implements a half adder """
     return ((a ^ b), (a and b))
 
