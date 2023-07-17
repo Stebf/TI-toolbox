@@ -1,4 +1,5 @@
-import argparse
+from argparse import ArgumentParser
+from decompiler import decompile_one
 
 
 def remove_comments(lines: list[str]) -> list[str]:
@@ -14,15 +15,6 @@ def remove_comments(lines: list[str]) -> list[str]:
         else:
             res += [line]
     return res
-
-
-def init_storage(preset: dict = {}) -> dict[int, int]:
-    """ Helper function to set up storage dict """
-    # print(f"[DEBUG] {preset}")
-    if preset == {}:
-        return {}
-    else:
-        return preset
 
 
 def parse_equation_string(equation_str: str) -> dict[int, int]:
@@ -43,107 +35,129 @@ def parse_equation_string(equation_str: str) -> dict[int, int]:
     return result
 
 
-def show_end(PC: int, ACC, IN1, IN2, S: dict) -> None:
-    """ Shows the final results, should be called at the end. """
-    print(f'''
-    PC:     {PC}
-    ACC:    {ACC}
-    IN1:    {IN1}
-    IN2:    {IN2}
-
-    S(i):   {S}
-    ''')
-
-
-def reti_interpreter(filename: str) -> None:
-    """ Interprets reti commands given in a file """
+class Command():
     register: dict[str, int] = {}
-    register['PC'] = 1
-    register['ACC'] = 0
-    register['IN1'] = 0
-    register['IN2'] = 0
+    storage = {}
+
+    def __init__(self, storage_preset={}) -> None:
+        self.register['PC'] = 1
+        self.register['ACC'] = 0
+        self.register['IN1'] = 0
+        self.register['IN2'] = 0
+        self.storage: dict[int, int] = storage_preset
+        return
+
+    def load(self, modus: str, destination: str, parameter: str):
+        match len(modus):
+            case 0:
+                self.register[destination] = self.storage[int(parameter)]
+            case 1:
+                self.register[destination] = int(parameter)
+            case 3:
+                self.register[destination] = self.storage[self.register[modus] + int(parameter)]
+        if destination != 'PC':
+            self.register['PC'] += 1
+        return
+
+    def store(self, modus: str, parameter: str):
+        if modus == '':
+            self.storage[int(parameter)] = self.register['ACC']
+        else:
+            self.storage[self.register[modus] + int(parameter)] = self.register['ACC']
+        self.register['PC'] += 1
+        return
+
+    def move(self, source: str, destination: str):
+        self.register[destination] = self.register[source]
+        if destination != 'PC':
+            self.register['PC'] += 1
+        return
+
+    def compute(self, command: str, destination: str, parameter: str):
+        param: int
+        if command.endswith('I'):
+            param = int(parameter)
+            command = command[:-1]
+        else:
+            param = self.storage[int(parameter)]
+
+        match command:
+            case 'SUB':
+                self.register[destination] = self.register[destination] - param
+            case 'ADD':
+                self.register[destination] = self.register[destination] + param
+
+            # TODO: logic functions not yet implemented, binary representations needed.
+            case 'OPLUS':
+                raise NotImplementedError
+            case 'OR':
+                raise NotImplementedError
+            case 'AND':
+                raise NotImplementedError
+
+        if destination != 'PC':
+            self.register['PC'] += 1
+        return
+
+    def nop(self) -> None:
+        self.register['PC'] += 1
+        return
+
+    def jump(self, modus, parameter):
+        if modus == '=':
+            modus = '=='
+        if modus == '':
+            if parameter == '0':
+                self.print_status()
+                return
+            self.register['PC'] += int(parameter)
+            return
+        if eval(str(self.register['ACC']) + ' ' + modus + ' 0'):
+            self.register['PC'] += int(parameter)
+        else:
+            self.register['PC'] += 1
+
+    def print_status(self) -> None:
+        print(self.register)
+        print(self.storage)
+        return
+
+
+def reti_interpreter(filename: str, binary: bool = False) -> None:
+    """ Interprets reti commands given in a file """
 
     try:
         with open(filename, 'r') as file:
             lines = remove_comments(file.readlines())
 
-            # Initialize storage array, either with preset or empty
-            if lines[0].startswith('S('):
-                storage = init_storage(parse_equation_string(lines[0]))
-                lines = lines[1:]
-            else:
-                storage = init_storage()
+        if lines[0].startswith('S('):
+            cmd = Command(parse_equation_string(lines[0]))
+            lines = lines[0:]
+        else:
+            cmd = Command()
 
-            while (register['PC'] < len(lines)):
-                # print(f"[DEBUG] PC: {pc} - {acc}")
-                current_line = lines[register['PC']]
-                split_line = current_line.split(' ')
-                command = split_line[0]
-                if 'STOREIN' in current_line:
-                    # TODO: could be simplified with new register storage
-                    var = split_line[1]
-                    if '1' in command:
-                        storage[register['IN1'] + int(var)] = register['ACC']
-                    elif '2' in command:
-                        storage[register['IN2'] + int(var)] = register['ACC']
-                    register['PC'] += 1
-                elif 'STORE' in current_line:
-                    var = split_line[1]
-                    storage[int(var)] = register['ACC']
-                    register['PC'] += 1
-                elif 'LOAD' in current_line:
-                    var = split_line[1]
-                    if var is None:
-                        raise KeyError
-                    else:
-                        var = int(var)
-                    if 'LOADIN' in command:
-                        # TODO: could be simplified with new register storage
-                        if '1' in command:
-                            register['ACC'] = storage[register['IN1'] + var]
-                        elif '2' in command:
-                            register['ACC'] = storage[register['IN2'] + var]
-                    elif 'LOADI' in command:
-                        register['ACC'] = var
-                    else:
-                        register['ACC'] = storage[var]
-                    register['PC'] += 1
-                elif 'MOVE' in current_line:
-                    source = split_line[1]
-                    destination = split_line[2]
-                    # TODO: Implement Move function
-                    if destination != 'PC':
-                        register['PC'] += 1
-                elif 'ADD' in current_line:
-                    register['ACC'] = register['ACC'] + int(split_line[1])
-                    register['PC'] += 1
-                elif 'SUB' in current_line:
-                    register['ACC'] = register['ACC'] - int(split_line[1])
-                    register['PC'] += 1
-                elif 'JUMP' in current_line:
-                    condition = current_line[4]
-                    if condition == ' ':
-                        if split_line[1] == '0':
-                            # Endless loop on itself -> program ended
-                            show_end(register['PC'], register['ACC'], register['IN1'], register['IN2'], storage)
-                            return
-                        else:
-                            # Unconditional jump
-                            register['PC'] += int(split_line[1])
-                    else:
-                        # Conditional jump
-                        if condition == '=':
-                            condition = '=='
-                        if eval(str(register['ACC']) + ' ' + condition + ' 0'):
-                            register['PC'] += int(split_line[1])
-                        else:
-                            register['PC'] += 1
-                elif 'NOP' in current_line:
-                    register['PC'] += 1
-                else:
-                    print(f"[WARN] Unknown command at PC={register['PC']}, skipping this command")
-                    register['PC'] += 1
-            show_end(register['PC'], register['ACC'], register['IN1'], register['IN2'], storage)
+        while (cmd.register['PC'] < len(lines)):
+            # cmd.print_status()
+            if binary:
+                current_line = decompile_one(lines[cmd.register['PC']].strip('\n'))
+            else:
+                current_line = lines[cmd.register['PC']].strip('\n')
+            split_line = current_line.split(' ')
+            command = split_line[0]
+            if command.startswith('LOAD'):
+                cmd.load(command[4:], split_line[1], split_line[2])
+            elif command.startswith('STORE'):
+                cmd.store(command[5:], split_line[1])
+            elif command.startswith('MOVE'):
+                cmd.move(split_line[1], split_line[2])
+            elif command.startswith('NOP'):
+                cmd.nop()
+            elif command.startswith('JUMP'):
+                cmd.jump(command[4:], split_line[1])
+            else:
+                cmd.compute(command, split_line[1], split_line[2])
+
+        cmd.print_status()
 
     except FileNotFoundError as e:
         print("[ERROR] Coudn't find file.")
@@ -159,11 +173,11 @@ def reti_interpreter(filename: str) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
     parser.add_argument("-p", "--path", help="path to reti code file", type=str)
     args = parser.parse_args()
     if not args.path:
-        path = "./code/ggt.reti"
+        path = "./code/ggt-v2.reti"
         reti_interpreter(path)
     else:
         reti_interpreter(args.path)
