@@ -123,7 +123,7 @@ class Command():
         return
 
 
-def reti_interpreter(filename: str, binary: bool = False) -> None:
+def reti_interpreter(filename: str, type: str = 'reti') -> None:
     """ Interprets reti commands given in a file """
 
     try:
@@ -138,14 +138,18 @@ def reti_interpreter(filename: str, binary: bool = False) -> None:
 
         while (cmd.register['PC'] < len(lines)):
             # cmd.print_status()
-            if binary:
+            if type == 'binary':
                 current_line = decompile_one(lines[cmd.register['PC']].strip('\n'))
             else:
                 current_line = lines[cmd.register['PC']].strip('\n')
             split_line = current_line.split(' ')
             command = split_line[0]
             if command.startswith('LOAD'):
-                cmd.load(command[4:], split_line[1], split_line[2])
+                if type == 'simple':
+                    dest = 'ACC'
+                else:
+                    dest = split_line[1]
+                cmd.load(command[4:], dest, split_line[-1])
             elif command.startswith('STORE'):
                 cmd.store(command[5:], split_line[1])
             elif command.startswith('MOVE'):
@@ -155,7 +159,11 @@ def reti_interpreter(filename: str, binary: bool = False) -> None:
             elif command.startswith('JUMP'):
                 cmd.jump(command[4:], split_line[1])
             else:
-                cmd.compute(command, split_line[1], split_line[2])
+                if type == 'simple':
+                    dest = 'ACC'
+                else:
+                    dest = split_line[1]
+                cmd.compute(command, dest, split_line[-1])
 
         cmd.print_status()
 
@@ -175,9 +183,10 @@ def reti_interpreter(filename: str, binary: bool = False) -> None:
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-p", "--path", help="path to reti code file", type=str)
+    parser.add_argument("-t", "--type", help="type of the given file", type=str, choices=['reti', 'simple', 'binary'])
     args = parser.parse_args()
     if not args.path:
         path = "./code/ggt-v2.reti"
-        reti_interpreter(path)
+        reti_interpreter(path, 'reti')
     else:
-        reti_interpreter(args.path)
+        reti_interpreter(args.path, args.type)
